@@ -1,0 +1,205 @@
+---
+title: "Maroubra Bay Analysis"
+output:
+  html_document:
+    df_print: paged
+Course: BEES2041 Data Analysis for Life and Earth Sciences
+Edition: Prime
+Date: Dec 25, 2021
+---
+# Objectives
+
+Maroubra Bay is ... . Over the years, ... . The BEES2041 course cohort has been collecting ...
+
+This project aims to analyse the aforementioned dataset to answer the following questions:
+
+  1. Does mean abundance of gastropods vary across zones and species at Maroubra bay?
+  2. How does gastropods species composition distribute in rockpool vs emergent habitats, and among sampling years?
+
+The following section and the remainder of this notebook details the code from analysis. For detailed information on data collection, background introduction of the project, as well as further interpretation of the results, see PDF in repo.
+
+# Analysis
+## Part A. Data Import
+```{r}
+library(dplyr)
+library(ggplot2)
+library(vegan)
+library(colorspace)
+```
+
+```{r}
+# Gastropods abundance with zone (defined by height on shore) data from Spring 2021, sampled from Maroubra Bay, NSW
+Gastropods <- read.csv(file = "MaroubraZones.csv")
+
+# Previous year (cohort 2016-2020, inclusive) data on multiple species composition at Maroubra Bay, NSW
+RockPools <- read.csv(file = "Maroubra_rock_pools.csv", header = TRUE)
+```
+
+## Part B. Approaching the Questions
+### 1. Does mean abundance of gastropods vary across zones and species at Maroubra bay?
+```{r}
+Gastropods$Zone <- factor(Gastropods$Zone, levels = c("Mid", "High")) ## stops ordering in alphabet. Instead, in our designated order
+
+# Vis Gastropods dataset
+ggplot(Gastropods, aes(Species, Abundance, fill=Zone)) + geom_boxplot() + theme_bw()
+```
+#### i. Bar plot: Abundance per zone
+```{r}
+Gastropods %>%
+  group_by(Species, Zone) %>%
+    summarise(mean.A = mean(Abundance),
+    sd.A = sd(Abundance),
+    SE.A = sd(Abundance)/sqrt(n())) %>%
+
+# Bar plot
+Fig_1 <- ggplot(aes(Zone, mean.A, fill=Species)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+
+  # [optional] geom_text(aes(label = paste(round(mean.A,2))), position = position_dodge(0.9), vjust =-0.6, hjust=-0.6, size = 3.5) + ## labels mean data on top of bar
+
+  geom_errorbar(aes(ymin = mean.A-SE.A, ymax = mean.A+SE.A), width = 0.3, position = position_dodge(0.9)) +
+  ylab("Mean count per quadrat ± SE") +
+  theme_classic()
+
+ggsave("bar_plot_maroubra_gastropods.png", width = 6, height = 4)
+
+Fig_1
+```
+#### ii. 2-ANOVA: Abundance among zones and gastropod species
+```{r}
+# 2-ANOVA
+Gastropods.ANOVA <- aov(Abundance ~ Zone * Species, data = Gastropods)
+# Residual diagnostics
+hist(Gastropods.ANOVA$residuals)
+plot(Gastropods.ANOVA, which=c(1,2,3))
+```
+
+From residual diagnostics we see that HOV is not established. Log and Sqrt transforms were deployed yet did not address the HOV issue.
+From the practical:
+
+> You have heterogeneous variances and are violating one of the assumptions of ANOVA. This often happens with data that samples patchily distributed organisms.
+  You cannot solve the problem but can consider its impact on the ANOVA; It may lead to an *artificially inflated F ratio*. Therefore proceed to run the ANOVA using the abundance data and **only reject null hypotheses if P < 0.01**. This is one way to address the possibility that you’d falsely reject your null hypothesis just because of heterogeneous variances.
+
+We proceed the ANOVA using the original abundance data with an adjusted $\alpha$=0.01 as heterogenous variance was detected.
+
+```{r}
+summary(Gastropods.ANOVA)
+```
+
+Significant interaction between factors Zone:Species detected:
+```{r}
+# [optional] interaction.plot(Gastropods$Zone, Gastropods$Species, Gastropods$Abundance)
+
+# Better plot:
+Gastropods$Zone <- factor(Gastropods$Zone, levels = c("Mid", "High")) # Mid -> High, consistent with the bar plot
+
+Gastropods %>%
+  group_by(Species, Zone) %>%
+  summarise(mean.A = mean(Abundance)) %>%
+
+Fig_2 <- ggplot(aes(Zone, mean.A, color=Species)) + geom_point() +
+  geom_line(aes(y = mean.A, group = Species), size=1) +
+  ylab("Mean abundance (count per quadrat)") +
+  theme_bw() +
+  theme(aspect.ratio = 1/2)
+
+ggsave("interaction_plot_gastropods.png", width = 10, height = 5)
+
+Fig_2
+```
+
+Tukey's post-hoc:
+```{r}
+TukeyHSD(Gastropods.ANOVA)
+```
+
+### 2. (a) How does gastropods species composition distribute in rockpool vs emergent habitats, and (b) among sampling years?
+
+First, inspect the dataset:
+```{r}
+view(RockPools)
+```
+
+Aim: Visualise species composition (reflected by individual species abundance) across habitats and sampling years.
+
+#### i. MDS by (1) habitat (2) sampling year
+```{r}
+# MDS
+RockPools_vars <- select(RockPools, -Habitat, - Year, -Replicate) ## Removing non-abundance data to form the key-variable matrix
+RockPools_vars_std <- decostand(RockPools_vars, method= "max") ## Standardisation*
+RP.sqrt <- sqrt(RockPools_vars_std + 1) ## Count data --> SQRT transform
+```
+
+*Algae abundance recorded in %cover, while gastropods recorded in counts. method="max" standardised each variable using respective maximum.
+
+```{r}
+# Creating the MDS profile
+RockPoolsSqrt.S <- metaMDS(RP.sqrt, distance = "bray", autotransform = FALSE, trace=FALSE)
+
+## This generates a similarity matrix with measure = Bray-Curtis similarity transform. Basis = standardised multivariable mtx we created previously.
+## SQRT reduces MDS stress.
+## Bray-Curtis similarity coefficient: Recommended for analyses that contrast the species composition of community data sets.
+
+
+# Preparing the data frame for the MDS plot
+RPsqrt_xy <- data.frame(RockPoolsSqrt.S$points) ## Sending the coordinates in MDS profile to new df
+
+RPsqrt_xy$Habitat <- RockPools$Habitat ## Habitat profile "fill-in"
+RPsqrt_xy$Year <- RockPools$Year ## Year profile "fill-in"
+```
+
+Now, we can generate the respective MDS plots using ggplot2:
+
+```{r}
+# MDS: (1) By habitat
+Fig_3a <- ggplot(RPsqrt_xy, aes(MDS1, MDS2, color = Habitat)) + geom_point() +
+  theme(axis.title = element_blank(),
+        panel.background = element_rect(fill = "grey22", colour = "black", size = 1),
+        panel.grid.major = element_line(color = "grey50", size=0.1),
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 11),legend.title = element_text(size = 14),
+        legend.key = element_rect(fill = NA)) +
+  guides(color = guide_legend(override.aes = list(size = 4.5)))
+
+ggsave("MDS_habitat.png", width = 10, height = 7)
+
+Fig_3a
+
+# MDS: (2) By sampling years
+Fig_3b <- ggplot(RPsqrt_xy, aes(MDS1, MDS2)) + geom_point(aes(color = Year)) +
+  theme(legend.key = element_rect(fill = NA),
+        legend.text = element_text(size = 11),legend.title = element_text(size = 14),
+        axis.title = element_blank(),
+        panel.background = element_rect(fill = "grey97", colour = "black", size = 1),
+        panel.grid.major = element_line(color = "grey86", size=0.1),
+        panel.grid.minor = element_blank(),
+        aspect.ratio = 7 / 9.9) +
+  guides(color = guide_legend(override.aes = list(size = 3)))
+
+ggsave("MDS_sampling_year.png", width = 10, height = 7)
+
+Fig_3b
+
+RockPoolsSqrt.S$stress ## Checking MDS stress for interpretation
+```
+#### ii. PERMANOVA by (1) habitat (2) sampling year
+```{r}
+# PERMANOVA: (1) By habitat
+RPHabitat.adonis <- adonis(RockPools_vars_std ~ RockPools$Habitat, permutations = 999, method = "bray")
+summary(RPHabitat.adonis)
+densityplot(permustats(RPHabitat.adonis))
+
+
+# PERMANOVA: (2) By sampling years
+RPYear.adonis <- adonis(Rock_pools_vars_std~RockPools$Year, permutations = 999, method = "bray")
+summary(RPYear.adonis)
+densityplot(permustats(RPYear.adonis))
+```
+#### iii. Dispersion Analysis
+```{r}
+
+
+
+
+
+```
