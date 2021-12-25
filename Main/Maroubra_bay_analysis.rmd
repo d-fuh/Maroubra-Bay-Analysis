@@ -23,7 +23,6 @@ The following section and the remainder of this notebook details the code from a
 ```{r}
 library(tidyverse)
 library(vegan)
-library(viridis)
 ```
 
 ```{r}
@@ -195,7 +194,6 @@ adonis(RockPools_vars_std ~ RockPools$Year, permutations = 999, method = "bray")
 densityplot(permustats(RPYear.adonis))
 ```
 #### iii. Dispersion Analysis
-***NEXT: START FROM CENTROID ETC TO COMPLETING THE DISPERSION ANALYSIS***
 ```{r}
 # 1. Defining group distance based on Bray-Curtis
 # Recall RockPools --variable selection-> RockPools_vars --standardised via method="max"-> RockPools_vars_std --sqrt transform-> RP.sqrt
