@@ -8,15 +8,15 @@ Edition: Prime
 Date: Dec 25, 2021
 ---
 # Objectives
-***TO BE COMPLETED***
-Maroubra Bay is ... . Over the years, ... . The BEES2041 course cohort has been collecting ...
 
-This project aims to analyse the aforementioned dataset to answer the following questions:
+Maroubra Bay is a popular beach situated in Sydney, NSW, Australia. Over the years, the BEES2041 course cohort has collected multiple species composition data of the intertidal community, recorded in Maroubra_rock_pools.csv. The 2021 cohort also collected gastropods abundance data based on the height of the sample zones, in MaroubraZones.csv.
+
+This project aims to analyse the aforementioned datasets to answer the following questions:
 
   1. Does mean abundance of gastropods vary across zones and species at Maroubra bay?
   2. How does gastropods species composition distribute in rockpool vs emergent habitats, and among sampling years?
 
-The following section and the remainder of this notebook details the code from analysis. For detailed information on data collection, background introduction of the project, as well as further interpretation of the results, see PDF in repo.
+The following section and the remainder of this notebook details the code from analysis. For detailed information on data collection, background introduction of the project, as well as further interpretation of the results, see PDF in the repository.
 
 # Analysis
 ## Part A. Data Import
@@ -52,13 +52,13 @@ Gastropods %>%
 
 # Bar plot
   ggplot(aes(Zone, mean.A, fill=Species)) +
-  geom_bar(stat = "identity", position = position_dodge()) +
+    geom_bar(stat = "identity", position = position_dodge()) +
 
-  # [optional] geom_text(aes(label = paste(round(mean.A,2))), position = position_dodge(0.9), vjust =-0.6, hjust=-0.6, size = 3.5) + ## labels mean data on top of bar
+    # [optional] geom_text(aes(label = paste(round(mean.A,2))), position = position_dodge(0.9), vjust =-0.6, hjust=-0.6, size = 3.5) + ## labels mean data on top of bar
 
-  geom_errorbar(aes(ymin = mean.A-SE.A, ymax = mean.A+SE.A), width = 0.3, position = position_dodge(0.9)) +
-  ylab("Mean count per quadrat ± SE") +
-  theme_classic() -> Fig_1
+    geom_errorbar(aes(ymin = mean.A-SE.A, ymax = mean.A+SE.A), width = 0.3, position = position_dodge(0.9)) +
+    ylab("Mean count per quadrat ± SE") +
+    theme_classic() -> Fig_1
 
 ggsave("bar_plot_maroubra_gastropods.png", width = 6, height = 4)
 
@@ -94,13 +94,13 @@ Gastropods$Zone <- factor(Gastropods$Zone, levels = c("Mid", "High")) # Mid -> H
 
 Gastropods %>%
   group_by(Species, Zone) %>%
-  summarise(mean.A = mean(Abundance)) %>%
+    summarise(mean.A = mean(Abundance)) %>%
 
   ggplot(aes(Zone, mean.A, color=Species)) + geom_point() +
-  geom_line(aes(y = mean.A, group = Species), size=1) +
-  ylab("Mean abundance (count per quadrat)") +
-  theme_bw() +
-  theme(aspect.ratio = 1/2) -> Fig_2
+    geom_line(aes(y = mean.A, group = Species), size=1) +
+    ylab("Mean abundance (count per quadrat)") +
+    theme_bw() +
+    theme(aspect.ratio = 1/2) -> Fig_2
 
 ggsave("interaction_plot_gastropods.png", width = 10, height = 5)
 
@@ -156,7 +156,7 @@ Fig_3a <- ggplot(RPsqrt_xy, aes(MDS1, MDS2, color = Habitat)) + geom_point() +
         panel.background = element_rect(fill = "grey22", colour = "black", size = 1),
         panel.grid.major = element_line(color = "grey30", size=0.1),
         panel.grid.minor = element_blank(),
-        legend.text = element_text(size = 11),legend.title = element_text(size = 14),
+        legend.text = element_text(size = 11), legend.title = element_text(size = 14),
         legend.key = element_rect(fill = NA)) +
   guides(color = guide_legend(override.aes = list(size = 4.5)))
 
@@ -197,9 +197,205 @@ densityplot(permustats(RPYear.adonis))
 #### iii. Dispersion Analysis
 ***NEXT: START FROM CENTROID ETC TO COMPLETING THE DISPERSION ANALYSIS***
 ```{r}
+# 1. Defining group distance based on Bray-Curtis
+# Recall RockPools --variable selection-> RockPools_vars --standardised via method="max"-> RockPools_vars_std --sqrt transform-> RP.sqrt
+# i.e. RP.sqrt contains multiple abundance data that were standardised and transformed by sqrt(x+1)
 
-
-
-
-
+vegdist(RP.sqrt, method="bray") -> RP.Bray  ## Maps aforementioned data using Bray-Curtis
 ```
+```{r}
+# 2. [OPTIONAL] Model using group medians with meta-analyses
+
+# 2-1. Dispersion by habitat
+
+# 2-1-1. Calculate multivariate dispersions
+RPH.Bray <- betadisper(RP.Bray, RockPools$Habitat)
+RPH.Bray
+
+# 2-1-2. Perform test
+anova(RPH.Bray)
+
+# 2-1-3. Permutation test for F
+permutest(RPH.Bray, pairwise = TRUE, permutations = 99)
+
+# 2-1-4. Tukey's Honest Significant Differences
+TukeyHSD(RPH.Bray)
+
+# 2-1-5. Plot the groups and distances to centroids on the first two PCoA axes
+plot(RPH.Bray)
+
+# 2-1-6. [OPTIONAL] Draw a box plot of the distances to centroid for each group
+# boxplot(RPH.Bray)
+
+# 2-1-7. [OPTIONAL STATS] Group centroids/medians
+# scores(RPH.Bray, 1:4, display = "centroids")
+
+# 2-1-8. [OPTIONAL STATS] Eigenvalues from the underlying principal coordinates analysis
+# eigenvals(RPH.Bray)
+```
+```{r}
+# 2-2. Dispersion by sampling year
+
+# 2-2-1. Calculate multivariate dispersions
+RPY.Bray <- betadisper(RP.Bray, RockPools$Year)
+RPY.Bray
+
+# 2-2-2. Perform test
+anova(RPY.Bray)
+
+# 2-2-3. Permutation test for F
+permutest(RPY.Bray, pairwise = TRUE, permutations = 99)
+
+# 2-2-4. Tukey's Honest Significant Differences
+TukeyHSD(RPY.Bray)
+
+# 2-2-5. Plot the groups and distances to centroids on the first two PCoA axes
+plot(RPY.Bray)
+```
+
+```{r, warning = False}
+# 3. Group median with bias correction
+# 3-1. By habitat
+RPH.corr <- betadisper(RP.Bray, RockPools$Habitat, type = "median", bias.adjust=TRUE)
+
+# 3-1-1. Coordinate mapping
+RPH.corr.crs <- data.frame(RPH.corr$vectors)
+
+RPH.corr.crs$Habitat <- RockPools$Habitat  ## Habitat column "fill-in"
+
+# 3-1-2. ggplot: PCA with Habitat coloured
+ggplot(RPH.corr.crs, aes(x=PCoA1, y=PCoA2, color=Habitat)) + geom_point() +
+  theme(axis.title = element_blank(),
+        panel.background = element_rect(fill = "grey22", colour = "black", size = 1),
+        panel.grid.major = element_line(color = "grey30", size=0.1),
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 11), legend.title = element_text(size = 14),
+        legend.key = element_rect(fill = NA)) +
+  guides(color = guide_legend(override.aes = list(size = 4.5)))
+
+ggsave("PCA_bdisp_habitat.png", width = 12, height = 7)
+
+# 3-2. By sampling year
+RPY.corr <- betadisper(RP.Bray, RockPools$Year, type = "median", bias.adjust=TRUE)
+
+# 3-2-1. Coordinate mapping*
+RPY.corr.crs <- data.frame(RPY.corr$vectors)
+
+RPY.corr.crs$Year <- RockPools$Year  ## Sampling year column "fill-in"
+
+# 3-2-2. PCA with Sampling year coloured
+ggplot(RPY.corr.crs, aes(x=PCoA1, y=PCoA2, color=Year)) + geom_point() +
+  theme(legend.key = element_rect(fill = NA),
+        legend.text = element_text(size = 11),legend.title = element_text(size = 14),
+        axis.title = element_blank(),
+        panel.background = element_rect(fill = "grey97", colour = "black", size = 1),
+        panel.grid.major = element_line(color = "grey86", size=0.1),
+        panel.grid.minor = element_blank()) +
+  guides(color = guide_legend(override.aes = list(size = 3)))
+
+ggsave("PCA_bdisp_sampling_year.png", width = 10, height = 7)
+```
+
+Notice that in fact we don't need to map the coordinates twice. Show that
+
+    RPH.corr <- betadisper(RP.Bray, RockPools$Habitat, type = "median", bias.adjust=TRUE)
+    RPH.corr.crs <- data.frame(RPH.corr$vectors)
+    RPH.corr.crs$Habitat <- RockPools$Habitat
+    RPH.corr.crs$Year <- RockPools$Year
+
+...then change the colour by group in the following ggplot2 commands would produce at least very similar plots.
+
+
+```{r}
+# 4. Centroid vs median
+# 4-1. By habitat
+# 4-1-1. Plotting the dispersion (From 2-1-5) with bias correction this time
+plot(RPH.corr, main=element_blank()) ## Default = Hull
+
+# 4-1-2. Dispersion plot with ellipses, defined as group centroid (Fig. 4a)
+plot(RPH.corr, hull = FALSE, ellipse = TRUE, main=element_blank())
+
+# 4-1-3. Similarly, revised 2-1-6 with bias correction (Fig. 4c)
+boxplot(RPH.corr, xlab=element_blank())
+
+# 4-2. By sampling year
+# 4-2-1. Plotting the dispersion with bias correction (Fig. 4b)
+plot(RPY.corr, main=element_blank())
+
+# 4-2-2. Dispersion plot with ellipses, defined as group centroid
+plot(RPY.corr, hull = FALSE, ellipse = TRUE, main=element_blank())
+
+# 4-2-3. Similarly, revised 2-2-6 with bias correction (Fig. 4d)
+boxplot(RPY.corr, xlab=element_blank())
+```
+```{r}
+# 5. Convex hull plots in ggplot2
+# 5-1. By habitat
+# 5-1-1. Define convex hull of each habitat group and store into an object
+
+hull.RPH <- RPH.corr.crs %>%
+    group_by(Habitat) %>%
+    slice(chull(PCoA1, PCoA2))
+
+# 5-1-2. Create a basis: PCA(1,2) of abundance data grouped by habitats
+
+Basis.H <- ggplot(RPH.corr.crs, aes(x=PCoA1, y=PCoA2, color=Habitat)) +
+  geom_point(size=0.15) +
+  theme(panel.background = element_rect(fill = "grey20", colour = "black", size = 1),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size = 11),
+        legend.key = element_rect(fill = NA))
+
+# 5-1-3. Layer the convex hull defined in 5-1
+Basis.H.Hull <- Basis.H + aes(fill = Habitat) + geom_polygon(data = hull.RPH, alpha=0.1, size=0.8)   
+
+Basis.H.Hull ## Basis+hull
+```
+
+```{r}
+# 5-2. By sampling year
+# 5-2-1. Define convex hull of each sampling year and store into an object
+
+hull.RPY <- RPY.corr.crs %>%
+    group_by(Year) %>%
+    slice(chull(PCoA1, PCoA2))
+
+# 5-2-2. Create a basis: PCA(1,2) of abundance data grouped by sampling year
+
+RPY.corr.crs$Year <- as.factor(RPY.corr.crs$Year)
+
+Basis.Y <- ggplot(RPY.corr.crs, aes(x=PCoA1, y=PCoA2, color=Year)) +
+  geom_point(size=0.7) +
+  theme(panel.background = element_rect(fill = "grey20", colour = "black", size = 1),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size = 11),
+        legend.key = element_rect(fill = NA)) +
+  labs(fill="Year")
+
+# 5-2-3. Layer the convex hull defined in 5-1
+Basis.Y.Hull <- Basis.Y + aes(colour = Year) + geom_polygon(data = hull.RPY, alpha=0.1, size=0.8)
+
+Basis.Y.Hull ## Basis+hull
+```
+
+```{r}
+# 6. Confidence ellipses plot
+# 6-1. By habitat
+
+Basis.H + aes(fill = Habitat) + stat_ellipse(level=0.95, size=1.2) +
+  theme(panel.background = element_rect(fill = "grey16", colour = "black", size = 1))
+
+ggsave("Ellipse_habitat.png", width = 10, height = 7)
+
+# 6-2. By sampling year
+
+Basis.Y + aes(colour = Year) + stat_ellipse(level=0.95, size=1.2) +
+  theme(panel.background = element_rect(fill = "grey16", colour = "black", size = 1))
+
+ggsave("Ellipse_sampling_year.png", width = 10, height = 7)
+```
+
