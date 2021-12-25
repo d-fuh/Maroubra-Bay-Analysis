@@ -8,7 +8,7 @@ Edition: Prime
 Date: Dec 25, 2021
 ---
 # Objectives
-
+***TO BE COMPLETED***
 Maroubra Bay is ... . Over the years, ... . The BEES2041 course cohort has been collecting ...
 
 This project aims to analyse the aforementioned dataset to answer the following questions:
@@ -21,10 +21,9 @@ The following section and the remainder of this notebook details the code from a
 # Analysis
 ## Part A. Data Import
 ```{r}
-library(dplyr)
-library(ggplot2)
+library(tidyverse)
 library(vegan)
-library(colorspace)
+library(viridis)
 ```
 
 ```{r}
@@ -52,14 +51,14 @@ Gastropods %>%
     SE.A = sd(Abundance)/sqrt(n())) %>%
 
 # Bar plot
-Fig_1 <- ggplot(aes(Zone, mean.A, fill=Species)) +
+  ggplot(aes(Zone, mean.A, fill=Species)) +
   geom_bar(stat = "identity", position = position_dodge()) +
 
   # [optional] geom_text(aes(label = paste(round(mean.A,2))), position = position_dodge(0.9), vjust =-0.6, hjust=-0.6, size = 3.5) + ## labels mean data on top of bar
 
   geom_errorbar(aes(ymin = mean.A-SE.A, ymax = mean.A+SE.A), width = 0.3, position = position_dodge(0.9)) +
   ylab("Mean count per quadrat ± SE") +
-  theme_classic()
+  theme_classic() -> Fig_1
 
 ggsave("bar_plot_maroubra_gastropods.png", width = 6, height = 4)
 
@@ -97,11 +96,11 @@ Gastropods %>%
   group_by(Species, Zone) %>%
   summarise(mean.A = mean(Abundance)) %>%
 
-Fig_2 <- ggplot(aes(Zone, mean.A, color=Species)) + geom_point() +
+  ggplot(aes(Zone, mean.A, color=Species)) + geom_point() +
   geom_line(aes(y = mean.A, group = Species), size=1) +
   ylab("Mean abundance (count per quadrat)") +
   theme_bw() +
-  theme(aspect.ratio = 1/2)
+  theme(aspect.ratio = 1/2) -> Fig_2
 
 ggsave("interaction_plot_gastropods.png", width = 10, height = 5)
 
@@ -130,7 +129,7 @@ RockPools_vars_std <- decostand(RockPools_vars, method= "max") ## Standardisatio
 RP.sqrt <- sqrt(RockPools_vars_std + 1) ## Count data --> SQRT transform
 ```
 
-*Algae abundance recorded in %cover, while gastropods recorded in counts. method="max" standardised each variable using respective maximum.
+*Algae abundance recorded in %cover, while gastropods and others recorded in counts. method="max" standardised each variable using respective maximum.
 
 ```{r}
 # Creating the MDS profile
@@ -155,7 +154,7 @@ Now, we can generate the respective MDS plots using ggplot2:
 Fig_3a <- ggplot(RPsqrt_xy, aes(MDS1, MDS2, color = Habitat)) + geom_point() +
   theme(axis.title = element_blank(),
         panel.background = element_rect(fill = "grey22", colour = "black", size = 1),
-        panel.grid.major = element_line(color = "grey50", size=0.1),
+        panel.grid.major = element_line(color = "grey30", size=0.1),
         panel.grid.minor = element_blank(),
         legend.text = element_text(size = 11),legend.title = element_text(size = 14),
         legend.key = element_rect(fill = NA)) +
@@ -186,16 +185,17 @@ RockPoolsSqrt.S$stress ## Checking MDS stress for interpretation
 ```{r}
 # PERMANOVA: (1) By habitat
 RPHabitat.adonis <- adonis(RockPools_vars_std ~ RockPools$Habitat, permutations = 999, method = "bray")
-summary(RPHabitat.adonis)
+adonis(RockPools_vars_std ~ RockPools$Habitat, permutations = 999, method = "bray")
 densityplot(permustats(RPHabitat.adonis))
 
 
 # PERMANOVA: (2) By sampling years
-RPYear.adonis <- adonis(Rock_pools_vars_std~RockPools$Year, permutations = 999, method = "bray")
-summary(RPYear.adonis)
+RPYear.adonis <- adonis(RockPools_vars_std ~ RockPools$Year, permutations = 999, method = "bray")
+adonis(RockPools_vars_std ~ RockPools$Year, permutations = 999, method = "bray")
 densityplot(permustats(RPYear.adonis))
 ```
 #### iii. Dispersion Analysis
+***NEXT: START FROM CENTROID ETC TO COMPLETING THE DISPERSION ANALYSIS***
 ```{r}
 
 
