@@ -203,7 +203,7 @@ vegdist(RP.sqrt, method="bray") -> RP.Bray  ## Maps aforementioned data using Br
 ```
 ```{r}
 # 2. [OPTIONAL] Model using group medians with meta-analyses
-
+# source: https://rdrr.io/cran/vegan/man/betadisper.html
 # 2-1. Dispersion by habitat
 
 # 2-1-1. Calculate multivariate dispersions
