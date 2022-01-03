@@ -1,4 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 # Change language displayed
-*.rmd liguist-detectable
+* linguist-detectable=false
+*.rmd liguist-detectable=true
