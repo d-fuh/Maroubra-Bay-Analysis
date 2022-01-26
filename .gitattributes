@@ -1,5 +1,2 @@
-# Auto detect text files and perform LF normalization
-* text=auto
-# Change language displayed
-* linguist-detectable=false
-*.rmd liguist-detectable=true
+*.Rmd linguist-language=R
+*.nb.html linguist-vendored
