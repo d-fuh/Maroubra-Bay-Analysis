@@ -3,9 +3,9 @@ title: "Maroubra Bay Analysis"
 output:
   html_document:
     df_print: paged
-Course: BEES2041 Data Analysis for Life and Earth Sciences
-Edition: Prime
-Date: Dec 25, 2021
+course: "BEES2041 Data Analysis for Life and Earth Sciences"
+edition: "Prime"
+date: "Dec 25, 2021"
 ---
 # Objectives
 
@@ -396,4 +396,3 @@ Basis.Y + aes(colour = Year) + stat_ellipse(level=0.95, size=1.2) +
 
 ggsave("Ellipse_sampling_year.png", width = 10, height = 7)
 ```
-
